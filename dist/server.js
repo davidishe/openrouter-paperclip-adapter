@@ -53,7 +53,19 @@ OpenRouter routes to 300+ models. Popular choices:
 Full model list: https://openrouter.ai/models
 `;
 function resolveApiKey(config) {
-    return config.apiKey || process.env["OPENROUTER_API_KEY"] || "";
+    return (config.apiKey ||
+        config.env?.["OPENROUTER_API_KEY"] ||
+        process.env["OPENROUTER_API_KEY"] ||
+        "");
+}
+function resolveApiKeySource(config) {
+    if (config.apiKey)
+        return "adapterConfig.apiKey";
+    if (config.env?.["OPENROUTER_API_KEY"])
+        return "OPENROUTER_API_KEY (agent env config)";
+    if (process.env["OPENROUTER_API_KEY"])
+        return "OPENROUTER_API_KEY (server env)";
+    return null;
 }
 function normalizeSession(sessionParams) {
     const base = { schemaVersion: 1, messageHistory: [] };
@@ -145,7 +157,7 @@ async function testEnvironment(ctx) {
     const config = ctx.config;
     const checks = [];
     const apiKey = resolveApiKey(config);
-    const keySource = config.apiKey ? "adapterConfig.apiKey" : process.env["OPENROUTER_API_KEY"] ? "OPENROUTER_API_KEY env var" : null;
+    const keySource = resolveApiKeySource(config);
     if (!apiKey) {
         checks.push({
             code: "api_key_missing",

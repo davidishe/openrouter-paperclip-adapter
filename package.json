@@ -1,6 +1,6 @@
 {
   "name": "openrouter-paperclip-adapter",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Paperclip external adapter for OpenRouter — access 300+ LLMs through a single API key",
   "type": "module",
   "main": "./dist/index.js",

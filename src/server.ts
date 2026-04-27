@@ -68,7 +68,19 @@ Full model list: https://openrouter.ai/models
 `;
 
 function resolveApiKey(config: OpenRouterAdapterConfig): string {
-  return config.apiKey || process.env["OPENROUTER_API_KEY"] || "";
+  return (
+    config.apiKey ||
+    config.env?.["OPENROUTER_API_KEY"] ||
+    process.env["OPENROUTER_API_KEY"] ||
+    ""
+  );
+}
+
+function resolveApiKeySource(config: OpenRouterAdapterConfig): string | null {
+  if (config.apiKey) return "adapterConfig.apiKey";
+  if (config.env?.["OPENROUTER_API_KEY"]) return "OPENROUTER_API_KEY (agent env config)";
+  if (process.env["OPENROUTER_API_KEY"]) return "OPENROUTER_API_KEY (server env)";
+  return null;
 }
 
 function normalizeSession(sessionParams: Record<string, unknown> | null): OpenRouterSessionState {
@@ -178,7 +190,7 @@ async function testEnvironment(ctx: AdapterEnvironmentTestContext): Promise<Adap
   const checks: AdapterEnvironmentTestResult["checks"] = [];
 
   const apiKey = resolveApiKey(config);
-  const keySource = config.apiKey ? "adapterConfig.apiKey" : process.env["OPENROUTER_API_KEY"] ? "OPENROUTER_API_KEY env var" : null;
+  const keySource = resolveApiKeySource(config);
 
   if (!apiKey) {
     checks.push({

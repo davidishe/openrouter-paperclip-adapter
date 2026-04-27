@@ -1,6 +1,6 @@
 export interface OpenRouterAdapterConfig {
   /** OpenRouter API key — required */
-  apiKey: string;
+  apiKey?: string;
   /** Model ID in OpenRouter format, e.g. "openai/gpt-4o" */
   model?: string;
   maxTokens?: number;
@@ -11,6 +11,8 @@ export interface OpenRouterAdapterConfig {
   siteUrl?: string;
   /** Optional site name sent in X-Title header */
   siteName?: string;
+  /** Resolved env vars from agent environment config — populated by Paperclip at runtime */
+  env?: Record<string, string>;
 }
 
 export interface OpenRouterMessage {
