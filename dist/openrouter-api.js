@@ -95,9 +95,12 @@ export class OpenRouterApiClient {
         };
     }
     async listModels() {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 8000);
         const response = await fetch(`${BASE_URL}/models`, {
             headers: this.buildHeaders(false),
-        });
+            signal: controller.signal,
+        }).finally(() => clearTimeout(timeout));
         if (!response.ok) {
             throw new Error(`OpenRouter API ${response.status}: failed to list models`);
         }
