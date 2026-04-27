@@ -32,12 +32,17 @@ export const models: AdapterModel[] = [
 
 export const agentConfigurationDoc = `# OpenRouter Adapter Configuration
 
+## API Key
+The adapter resolves the API key in this order:
+1. adapterConfig.apiKey (set directly in the adapter config form)
+2. OPENROUTER_API_KEY environment variable (set in agent env config)
+
 ## Required
-- apiKey: your OpenRouter API key from https://openrouter.ai/keys
 - model: model ID in provider/name format
   Examples: openai/gpt-4o, anthropic/claude-sonnet-4-5, google/gemini-2.0-flash-001
 
 ## Optional
+- apiKey: OpenRouter API key (can use OPENROUTER_API_KEY env var instead)
 - maxTokens: max output tokens (default: 8192)
 - temperature: sampling temperature 0.0–2.0 (default: 0.7)
 - timeoutMs: request timeout in ms (default: 120000)
@@ -62,6 +67,10 @@ OpenRouter routes to 300+ models. Popular choices:
 Full model list: https://openrouter.ai/models
 `;
 
+function resolveApiKey(config: OpenRouterAdapterConfig): string {
+  return config.apiKey || process.env["OPENROUTER_API_KEY"] || "";
+}
+
 function normalizeSession(sessionParams: Record<string, unknown> | null): OpenRouterSessionState {
   const base: OpenRouterSessionState = { schemaVersion: 1, messageHistory: [] };
   if (!sessionParams) return base;
@@ -82,8 +91,9 @@ function normalizeSession(sessionParams: Record<string, unknown> | null): OpenRo
 async function execute(ctx: AdapterExecutionContext): Promise<AdapterExecutionResult> {
   const config = ctx.config as unknown as OpenRouterAdapterConfig;
 
-  if (!config.apiKey) {
-    const errorMessage = "OpenRouter API key is not configured. Add apiKey to adapter config.";
+  const apiKey = resolveApiKey(config);
+  if (!apiKey) {
+    const errorMessage = "OpenRouter API key is not configured. Set apiKey in adapter config or OPENROUTER_API_KEY env var.";
     await ctx.onLog("stderr", `[openrouter] ${errorMessage}\n`);
     return {
       exitCode: 1,
@@ -99,7 +109,7 @@ async function execute(ctx: AdapterExecutionContext): Promise<AdapterExecutionRe
 
   const model = config.model ?? "openai/gpt-4o";
   const sessionState = normalizeSession(ctx.runtime.sessionParams);
-  const client = new OpenRouterApiClient(config);
+  const client = new OpenRouterApiClient({ ...config, apiKey });
 
   await ctx.onLog("stdout", `[openrouter] Starting run ${ctx.runId} for agent "${ctx.agent.name}"\n`);
   await ctx.onLog("stdout", `[openrouter] Model: ${model}\n`);
@@ -167,11 +177,14 @@ async function testEnvironment(ctx: AdapterEnvironmentTestContext): Promise<Adap
   const config = ctx.config as unknown as OpenRouterAdapterConfig;
   const checks: AdapterEnvironmentTestResult["checks"] = [];
 
-  if (!config.apiKey) {
+  const apiKey = resolveApiKey(config);
+  const keySource = config.apiKey ? "adapterConfig.apiKey" : process.env["OPENROUTER_API_KEY"] ? "OPENROUTER_API_KEY env var" : null;
+
+  if (!apiKey) {
     checks.push({
       code: "api_key_missing",
       level: "error",
-      message: "OpenRouter API key is not set. Get one at https://openrouter.ai/keys",
+      message: "OpenRouter API key is not set. Add apiKey to adapter config or set OPENROUTER_API_KEY env var. Get a key at https://openrouter.ai/keys",
     });
     return {
       adapterType: ADAPTER_TYPE,
@@ -181,7 +194,13 @@ async function testEnvironment(ctx: AdapterEnvironmentTestContext): Promise<Adap
     };
   }
 
-  const client = new OpenRouterApiClient(config);
+  checks.push({
+    code: "api_key_found",
+    level: "info",
+    message: `API key resolved from ${keySource}.`,
+  });
+
+  const client = new OpenRouterApiClient({ ...config, apiKey });
   const connectionResult = await client.testConnection();
 
   if (!connectionResult.ok) {
@@ -273,8 +292,8 @@ async function getConfigSchema(): Promise<AdapterConfigSchema> {
         key: "apiKey",
         label: "API Key",
         type: "text",
-        required: true,
-        hint: "Your OpenRouter API key from https://openrouter.ai/keys",
+        required: false,
+        hint: "Your OpenRouter API key from https://openrouter.ai/keys. Can also be set via OPENROUTER_API_KEY env var.",
       },
       {
         key: "model",

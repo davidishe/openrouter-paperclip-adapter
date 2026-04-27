@@ -15,32 +15,61 @@ describe("openrouter adapter", () => {
     }
   });
 
-  it("testEnvironment fails when apiKey is missing", async () => {
-    const adapter = createServerAdapter();
-    const result = await adapter.testEnvironment({
-      companyId: "test-company",
-      adapterType: "openrouter",
-      config: {},
-    });
-    expect(result.status).toBe("fail");
-    expect(result.checks.some((c) => c.code === "api_key_missing")).toBe(true);
+  it("testEnvironment fails when apiKey is missing and env var is absent", async () => {
+    const saved = process.env["OPENROUTER_API_KEY"];
+    delete process.env["OPENROUTER_API_KEY"];
+    try {
+      const adapter = createServerAdapter();
+      const result = await adapter.testEnvironment({
+        companyId: "test-company",
+        adapterType: "openrouter",
+        config: {},
+      });
+      expect(result.status).toBe("fail");
+      expect(result.checks.some((c) => c.code === "api_key_missing")).toBe(true);
+    } finally {
+      if (saved !== undefined) process.env["OPENROUTER_API_KEY"] = saved;
+    }
   });
 
-  it("execute returns error when apiKey is missing", async () => {
-    const adapter = createServerAdapter();
-    const onLog = vi.fn().mockResolvedValue(undefined);
+  it("testEnvironment passes when OPENROUTER_API_KEY env var is set", async () => {
+    const saved = process.env["OPENROUTER_API_KEY"];
+    process.env["OPENROUTER_API_KEY"] = "sk-or-test-key";
+    try {
+      const adapter = createServerAdapter();
+      const result = await adapter.testEnvironment({
+        companyId: "test-company",
+        adapterType: "openrouter",
+        config: {},
+      });
+      expect(result.checks.some((c) => c.code === "api_key_found")).toBe(true);
+    } finally {
+      if (saved !== undefined) process.env["OPENROUTER_API_KEY"] = saved;
+      else delete process.env["OPENROUTER_API_KEY"];
+    }
+  });
 
-    const result = await adapter.execute({
-      runId: "run-1",
-      agent: { id: "agent-1", companyId: "co-1", name: "Test", adapterType: "openrouter", adapterConfig: {} },
-      runtime: { sessionId: null, sessionParams: null, sessionDisplayId: null, taskKey: null },
-      config: {},
-      context: {},
-      onLog,
-    });
+  it("execute returns error when apiKey is missing and env var is absent", async () => {
+    const saved = process.env["OPENROUTER_API_KEY"];
+    delete process.env["OPENROUTER_API_KEY"];
+    try {
+      const adapter = createServerAdapter();
+      const onLog = vi.fn().mockResolvedValue(undefined);
 
-    expect(result.exitCode).toBe(1);
-    expect(result.summary).toMatch(/api key/i);
+      const result = await adapter.execute({
+        runId: "run-1",
+        agent: { id: "agent-1", companyId: "co-1", name: "Test", adapterType: "openrouter", adapterConfig: {} },
+        runtime: { sessionId: null, sessionParams: null, sessionDisplayId: null, taskKey: null },
+        config: {},
+        context: {},
+        onLog,
+      });
+
+      expect(result.exitCode).toBe(1);
+      expect(result.summary).toMatch(/api key/i);
+    } finally {
+      if (saved !== undefined) process.env["OPENROUTER_API_KEY"] = saved;
+    }
   });
 
   it("getConfigSchema returns fields including apiKey and model", async () => {
