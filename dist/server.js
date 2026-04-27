@@ -247,7 +247,6 @@ async function getConfigSchema() {
             modelOptions = liveModels.map((m) => ({
                 value: m.id,
                 label: m.name,
-                group: m.id.split("/")[0],
             }));
         }
     }
@@ -270,7 +269,7 @@ async function getConfigSchema() {
             {
                 key: "model",
                 label: "Model",
-                type: "combobox",
+                type: "select",
                 options: modelOptions,
                 default: defaultModel,
                 required: true,

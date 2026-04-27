@@ -80,6 +80,9 @@ describe("openrouter adapter", () => {
         expect(keys).toContain("model");
         expect(keys).toContain("temperature");
         expect(keys).toContain("maxTokens");
+        const modelField = schema.fields.find((f) => f.key === "model");
+        expect(modelField?.type).toBe("select");
+        expect(Array.isArray(modelField?.options)).toBe(true);
     });
     it("listModels falls back to static list when API is unavailable", async () => {
         const adapter = createServerAdapter();

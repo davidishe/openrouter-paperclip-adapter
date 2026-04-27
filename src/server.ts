@@ -276,7 +276,7 @@ async function listModels(): Promise<AdapterModel[]> {
 }
 
 async function getConfigSchema(): Promise<AdapterConfigSchema> {
-  let modelOptions: Array<{ label: string; value: string; group?: string }> = [];
+  let modelOptions: Array<{ label: string; value: string }> = [];
 
   try {
     const client = new OpenRouterApiClient({ apiKey: "" });
@@ -285,7 +285,6 @@ async function getConfigSchema(): Promise<AdapterConfigSchema> {
       modelOptions = liveModels.map((m) => ({
         value: m.id,
         label: m.name,
-        group: m.id.split("/")[0],
       }));
     }
   } catch {
@@ -310,7 +309,7 @@ async function getConfigSchema(): Promise<AdapterConfigSchema> {
       {
         key: "model",
         label: "Model",
-        type: "combobox",
+        type: "select",
         options: modelOptions,
         default: defaultModel,
         required: true,
